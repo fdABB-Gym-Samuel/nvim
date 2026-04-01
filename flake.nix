@@ -42,7 +42,7 @@
         );
       postFixup = ''
         wrapProgram $out/bin/nvim \
-          --prefix PATH : ${pkgs.lib.makeBinPath runtimeDepencies}
+          --prefix PATH : ${pkgs.lib.makeBinPath runtimeDepencies} \
           --set DOTNET_CLI_TELEMETRY_OPTOUT 1
       '';
       }
