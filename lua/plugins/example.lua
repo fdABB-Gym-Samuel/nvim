@@ -71,8 +71,15 @@ return {
       ---@type lspconfig.options
       servers = {
         -- pyright will be automatically installed with mason and loaded with lspconfig
-        pyright = {},
-        ruff = {},
+        pyright = { 
+          mason = false,
+        },
+        ruff = {
+          mason = false,
+        },
+        lua_ls = {
+          mason = false,
+        },
       },
     },
   },
@@ -188,13 +195,6 @@ return {
     "williamboman/mason.nvim",
     opts = {
       ensure_installed = {
-        "stylua",
-        "shellcheck",
-        "shfmt",
-        "flake8",
-        "nixd",
-        "ruff",
-        "pyright",
       },
     },
   },

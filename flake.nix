@@ -20,6 +20,9 @@
         gopls
         go
 
+        python3
+        pyright
+
         lua51Packages.luarocks-nix
         lua51Packages.magick
         lua5_1
