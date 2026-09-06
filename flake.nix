@@ -1,68 +1,108 @@
 {
-  description = "Flake for nvim config";
+  description = "Flake for nvim config (LazyVim, tools provided by Nix instead of Mason)";
+
   inputs = {
-      nixpkgs = {
-          url = "github:Nixos/nixpkgs";
-        };
-    };
-  outputs = { nixpkgs, ... }:
-  let
-    system = "x86_64-linux";
-    pkgs = import nixpkgs { inherit system; config.allowBroken = true; };
-    inherit (pkgs) lib;
-    neovim = pkgs.neovim.overrideAttrs (oldAttrs: let
-      runtimeDepencies = with pkgs; [
-        git
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  };
 
-        wl-clipboard
-        lua-language-server
-        nixd
-        gopls
-        go
-
-        python3
-        pyright
-
-        lua51Packages.luarocks-nix
-        lua51Packages.magick
-        lua5_1
+  outputs = { self, nixpkgs }:
+    let
+      forAllSystems = nixpkgs.lib.genAttrs [
+        "x86_64-linux"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ];
-    in {
-      pname = "neovim-zilch";
-      nativeBuildInputs = 
-        (oldAttrs.nativeBuildInputs or [])
-        ++ runtimeDepencies;
-      
-      installPhase = 
-        (oldAttrs.installPhase or "")
-        + (
-          runtimeDepencies
-          |> map (x: "ln -s ${x.out}/bin/* $out/bin")
-          |> lib.concatStringsSep "\n"
-        );
-      postFixup = ''
-        wrapProgram $out/bin/nvim \
-          --prefix PATH : ${pkgs.lib.makeBinPath runtimeDepencies} \
-          --set DOTNET_CLI_TELEMETRY_OPTOUT 1
-      '';
-      }
-    );
-    in 
+
+      mkNeovim = pkgs:
+        let
+          # Everything Mason would have installed, from nixpkgs instead.
+          # Add tools here when enabling a new LazyVim extra.
+          runtimeDeps = with pkgs; [
+            # core tooling LazyVim expects
+            git
+            ripgrep
+            fd
+            fzf
+            lazygit
+            curl
+
+            # treesitter grammars are compiled at runtime
+            gcc
+            tree-sitter
+
+            # lua
+            lua-language-server
+            stylua
+
+            # nix
+            nil
+            nixd
+            nixfmt-rfc-style
+
+            # go
+            go
+            gopls
+            gofumpt
+            gotools # goimports etc.
+            delve
+
+            # python
+            pyright
+            ruff
+
+            # rust
+            rustc
+            cargo
+            rust-analyzer
+            rustfmt
+            clippy
+            taplo # TOML LSP (Cargo.toml)
+            lldb # provides lldb-dap for debugging via rustaceanvim
+
+            # typescript / svelte / web
+            nodejs
+            vtsls
+            svelte-language-server
+            vscode-langservers-extracted # jsonls, html, css, eslint
+            prettier
+
+            # markdown
+            marksman
+            markdownlint-cli2
+
+            # shell
+            shellcheck
+            shfmt
+          ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
+            wl-clipboard
+          ];
+        in
+        pkgs.symlinkJoin {
+          name = "neovim-zilch";
+          paths = [ pkgs.neovim ];
+          nativeBuildInputs = [ pkgs.makeWrapper ];
+          postBuild = ''
+            wrapProgram $out/bin/nvim \
+              --prefix PATH : ${pkgs.lib.makeBinPath runtimeDeps}
+          '';
+        };
+    in
     {
-        packages.x86_64-linux.default = neovim;
-        apps.x86_64-linux.default = {
-            type = "app";
-            program = "${neovim}/bin/nvim";
-            dependencies = with pkgs; [ gcc ];
-          };
+      packages = forAllSystems (system: {
+        default = mkNeovim nixpkgs.legacyPackages.${system};
+      });
+
+      # Optional: use as an overlay to get `pkgs.neovim-zilch`
+      overlays.default = final: prev: {
+        neovim-zilch = mkNeovim final;
       };
-  }
 
-
-
-
-
-
-
-
-
+      apps = forAllSystems (system: {
+        default = {
+          type = "app";
+          program = "${self.packages.${system}.default}/bin/nvim";
+        };
+      });
+    };
+}
