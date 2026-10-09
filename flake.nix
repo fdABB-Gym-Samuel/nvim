@@ -77,6 +77,16 @@
           ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
             wl-clipboard
           ];
+          # The Lua config itself, copied into the store.
+          config = pkgs.lib.fileset.toSource {
+            root = ./.;
+            fileset = pkgs.lib.fileset.unions [
+              ./init.lua
+              ./lua
+              ./lazy-lock.json
+              ./lazyvim.json
+            ];
+          };
         in
         pkgs.symlinkJoin {
           name = "neovim-zilch";
@@ -84,7 +94,8 @@
           nativeBuildInputs = [ pkgs.makeWrapper ];
           postBuild = ''
             wrapProgram $out/bin/nvim \
-              --prefix PATH : ${pkgs.lib.makeBinPath runtimeDeps}
+              --prefix PATH : ${pkgs.lib.makeBinPath runtimeDeps} \
+              --add-flags "-u ${config}/init.lua"
           '';
         };
     in

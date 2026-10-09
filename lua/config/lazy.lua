@@ -30,6 +30,7 @@ require("lazy").setup({
     version = false, -- always use the latest git commit
     -- version = "*", -- try installing the latest stable version for plugins that support semver
   },
+  lockfile = vim.g.lazy_lockfile or (vim.g.config_root .. "/lazy-lock.json"),
   install = { colorscheme = { "tokyonight", "habamax" } },
   checker = {
     enabled = true, -- check for plugin updates periodically
@@ -37,6 +38,8 @@ require("lazy").setup({
   }, -- automatically check for plugin updates
   performance = {
     rtp = {
+      -- keep this config on the rtp after lazy resets it (needed when loaded from the Nix store)
+      paths = { vim.g.config_root },
       -- disable some rtp plugins
       disabled_plugins = {
         "gzip",
