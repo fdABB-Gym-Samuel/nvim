@@ -6,3 +6,6 @@ vim.opt.tabstop = 4
 vim.opt.softtabstop = 4
 vim.opt.shiftwidth = 4
 vim.opt.spell = true
+
+-- SageMath scripts are (preparsed) Python, so treat them as such
+vim.filetype.add({ extension = { sage = "python" } })
